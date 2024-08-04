@@ -1,0 +1,89 @@
+version: '3.8'
+
+x-system-defaults: &system-default
+  restart: unless-stopped
+  networks:
+    - connect-network
+
+networks:
+  connect-network:
+    name: connect-network
+
+volumes:
+  redis_data:
+    name: connect_redis_data
+  kafka_data:
+    name: connect_kafka_data
+  zookeeper_data:
+    name: connect_zookeeper_data
+  zookeeper_datalog:
+    name: connect_zookeeper_datalog
+  zookeeper_logs:
+    name: connect_zookeeper_logs
+
+services:
+  backend:
+    <<: *system-default
+    hostname: connect-backend
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: "connect-backend"
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}"
+      WEB_TOPIC: "${TOPIC:-registration}"
+      DATABASE_URL: "${DATABASE_URL:-123}"
+      REDIS_HOST: "${REDIS_HOST:-redis}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      DEVELOP: "${DEVELOP:-True}"
+      DEBUG: "${DEBUG:-True}"
+    command: uvicorn main:app --reload --host 0.0.0.0 --port 8000
+    volumes:
+      - ./src:/usr/connect/src/
+
+  zookeeper:
+    <<: *system-default
+    hostname: zookeeper
+    image: 'bitnami/zookeeper:3.7.0'
+    container_name: zookeeper
+    ports:
+      - '2181:2181'
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    volumes:
+      - zookeeper_data:/data
+      - zookeeper_datalog:/datalog
+      - zookeeper_logs:/logs
+
+  kafka:
+    <<: *system-default
+    hostname: kafka
+    image: 'bitnami/kafka:2.8.0'
+    container_name: kafka
+    ports:
+      - "9093:9093"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: "${KAFKA_ZOOKEEPER_CONNECT:-zookeeper:2181}"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
+      - redis
+
+  redis:
+    <<: *system-default
+    hostname: redis
+    image: redis
+    container_name: redis
+    environment:
+      REDIS_HOST: "${REDIS_HOST:-redis}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      MAXMEMORY: "200mb"
+      MAXMEMORY_POLICY: "allkeys-lru"
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
