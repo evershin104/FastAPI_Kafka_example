@@ -24,7 +24,7 @@ async def consume(topic: str) -> None:
     try:
         async for msg in consumer:
             serialized = json.loads(msg.value)
-            logger.info(f"MSG ({topic}): '{serialized}'.")
+            logger.info(f"MSG ({topic}): '{json.dumps(serialized,  ensure_ascii=False)}'.")
     finally:
         await consumer.stop()
         logger.info(f"Consumer on '{topic}' started.")
