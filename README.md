@@ -32,7 +32,7 @@ chmod -R a+rw .         # Give permissions
 docker-compose build    # Build containers
 docker-compose up -d    # Run containers
 ```
-There You will see 4 service: BackEnd app, Kafka and Redis (via broker) and Zookeeper for metada.
+There You will see 4 service: BackEnd app, Kafka (via broker/server) and Redis (for no reason) and Zookeeper for metada.
 
 ```sh
 docker-compose down     # To stop services
